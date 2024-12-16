@@ -17,6 +17,10 @@ static const uint32_t READER_TASK_STACK_SIZE = 5 * 1024;
 static const uint32_t DECODER_TASK_STACK_SIZE = 3 * 1024;
 static const uint32_t RESAMPLER_TASK_STACK_SIZE = 3 * 1024;
 
+static const UBaseType_t READER_TASK_CORE_ID = 1;
+static const UBaseType_t DECODER_TASK_CORE_ID = 1;
+static const UBaseType_t RESAMPLER_TASK_CORE_ID = 1;
+
 static const size_t INFO_ERROR_QUEUE_COUNT = 5;
 
 static const char *const TAG = "nabu_media_player.pipeline";
@@ -137,18 +141,18 @@ esp_err_t AudioPipeline::common_start_(uint32_t target_sample_rate, const std::s
 
   if (this->read_task_handle_ == nullptr) {
     this->read_task_handle_ =
-        xTaskCreateStatic(AudioPipeline::read_task_, (task_name + "_read").c_str(), READER_TASK_STACK_SIZE,
-                          (void *) this, priority, this->read_task_stack_buffer_, &this->read_task_stack_);
+        xTaskCreateStaticPinnedToCore(AudioPipeline::read_task_, (task_name + "_read").c_str(), READER_TASK_STACK_SIZE,
+                          (void *) this, priority, this->read_task_stack_buffer_, &this->read_task_stack_, READER_TASK_CORE_ID);
   }
   if (this->decode_task_handle_ == nullptr) {
     this->decode_task_handle_ =
-        xTaskCreateStatic(AudioPipeline::decode_task_, (task_name + "_decode").c_str(), DECODER_TASK_STACK_SIZE,
-                          (void *) this, priority, this->decode_task_stack_buffer_, &this->decode_task_stack_);
+        xTaskCreateStaticPinnedToCore(AudioPipeline::decode_task_, (task_name + "_decode").c_str(), DECODER_TASK_STACK_SIZE,
+                          (void *) this, priority, this->decode_task_stack_buffer_, &this->decode_task_stack_, DECODER_TASK_CORE_ID);
   }
   if (this->resample_task_handle_ == nullptr) {
     this->resample_task_handle_ =
-        xTaskCreateStatic(AudioPipeline::resample_task_, (task_name + "_resample").c_str(), RESAMPLER_TASK_STACK_SIZE,
-                          (void *) this, priority, this->resample_task_stack_buffer_, &this->resample_task_stack_);
+        xTaskCreateStaticPinnedToCore(AudioPipeline::resample_task_, (task_name + "_resample").c_str(), RESAMPLER_TASK_STACK_SIZE,
+                          (void *) this, priority, this->resample_task_stack_buffer_, &this->resample_task_stack_, RESAMPLER_TASK_CORE_ID);
   }
 
   if ((this->read_task_handle_ == nullptr) || (this->decode_task_handle_ == nullptr) ||

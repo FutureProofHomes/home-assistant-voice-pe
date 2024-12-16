@@ -38,6 +38,8 @@ static const uint32_t INFERENCE_TASK_STACK_SIZE = 3072;
 
 static const UBaseType_t PREPROCESSOR_TASK_PRIORITY = 3;
 static const UBaseType_t INFERENCE_TASK_PRIORITY = 3;
+static const UBaseType_t PREPROCESSOR_TASK_CORE = 0;
+static const UBaseType_t INFERENCE_TASK_CORE = 0;
 
 enum EventGroupBits : uint32_t {
   COMMAND_STOP = (1 << 0),  // Stops all activity in the mWW tasks
@@ -379,15 +381,15 @@ void MicroWakeWord::start() {
   ESP_LOGD(TAG, "Starting wake word detection");
 
   if (this->preprocessor_task_handle_ == nullptr) {
-    this->preprocessor_task_handle_ = xTaskCreateStatic(
+    this->preprocessor_task_handle_ = xTaskCreateStaticPinnedToCore(
         MicroWakeWord::preprocessor_task_, "preprocessor", PREPROCESSOR_TASK_STACK_SIZE, (void *) this,
-        PREPROCESSOR_TASK_PRIORITY, this->preprocessor_task_stack_buffer_, &this->preprocessor_task_stack_);
+        PREPROCESSOR_TASK_PRIORITY, this->preprocessor_task_stack_buffer_, &this->preprocessor_task_stack_, PREPROCESSOR_TASK_CORE);
   }
 
   if (this->inference_task_handle_ == nullptr) {
     this->inference_task_handle_ =
-        xTaskCreateStatic(MicroWakeWord::inference_task_, "inference", INFERENCE_TASK_STACK_SIZE, (void *) this,
-                          INFERENCE_TASK_PRIORITY, this->inference_task_stack_buffer_, &this->inference_task_stack_);
+        xTaskCreateStaticPinnedToCore(MicroWakeWord::inference_task_, "inference", INFERENCE_TASK_STACK_SIZE, (void *) this,
+                          INFERENCE_TASK_PRIORITY, this->inference_task_stack_buffer_, &this->inference_task_stack_, INFERENCE_TASK_CORE);
   }
 
   xEventGroupSetBits(this->event_group_, PREPROCESSOR_COMMAND_START);

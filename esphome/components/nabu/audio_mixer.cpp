@@ -14,6 +14,7 @@ static const size_t INPUT_RING_BUFFER_SAMPLES = 24000;
 static const size_t OUTPUT_BUFFER_SAMPLES = 8192;
 static const size_t QUEUE_COUNT = 20;
 
+static const UBaseType_t MIXER_TASK_CORE_ID = 1;
 static const uint32_t TASK_STACK_SIZE = 3072;
 static const size_t TASK_DELAY_MS = 25;
 
@@ -28,8 +29,8 @@ esp_err_t AudioMixer::start(speaker::Speaker *speaker, const std::string &task_n
   }
 
   if (this->task_handle_ == nullptr) {
-    this->task_handle_ = xTaskCreateStatic(AudioMixer::audio_mixer_task_, task_name.c_str(), TASK_STACK_SIZE,
-                                           (void *) this, priority, this->stack_buffer_, &this->task_stack_);
+    this->task_handle_ = xTaskCreateStaticPinnedToCore(AudioMixer::audio_mixer_task_, task_name.c_str(), TASK_STACK_SIZE,
+                                           (void *) this, priority, this->stack_buffer_, &this->task_stack_, MIXER_TASK_CORE_ID);
   }
 
   if (this->task_handle_ == nullptr) {
@@ -171,7 +172,8 @@ void AudioMixer::audio_mixer_task_(void *params) {
           bytes_to_read = std::min(bytes_to_read, announcement_available);
         }
 
-        if (bytes_to_read > 0) {
+        if (bytes_to_read > 0) { //isn't this always the case if we got here?
+          
           size_t media_bytes_read = 0;
           if (media_available * transfer_media > 0) {
             media_bytes_read = this_mixer->media_ring_buffer_->read((void *) media_buffer, bytes_to_read, 0);
