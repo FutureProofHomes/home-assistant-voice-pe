@@ -180,8 +180,6 @@ AudioReaderState AudioReader::http_read_() {
         this->client_, (char *) this->transfer_buffer_ + this->transfer_buffer_length_, bytes_to_read);
 
     if (received_len > 0) {
-      //printf( "http_read_: transfer_buffer_length_ %d ring_buffer_free: %d [%d]\n", this->transfer_buffer_length_, this->output_ring_buffer_->free() ,millis() );
-      //printf( "http_read_: received_len %d [%d]\n", received_len, millis() );
       this->transfer_buffer_length_ += received_len;
       this->no_data_read_count_ = 0;
     } else if (received_len < 0) {
@@ -191,15 +189,6 @@ AudioReaderState AudioReader::http_read_() {
     } else {
       if (bytes_to_read > 0) {
         // Read timed out
-#if 0
-        printf( "http_read_: transfer_buffer_length_ %d ring_buffer_free: %d [%d]\n", this->transfer_buffer_length_, this->output_ring_buffer_->free() ,millis() );
-        ++this->no_data_read_count_;
-        if (this->no_data_read_count_ >= ERROR_COUNT_NO_DATA_READ_TIMEOUT) {
-          // Timed out with no data read too many times, so the http read has failed
-          this->cleanup_connection_();
-          return AudioReaderState::FAILED;
-        }
-#endif
         vTaskDelay(pdMS_TO_TICKS(READ_WRITE_TIMEOUT_MS));
       }
     }
