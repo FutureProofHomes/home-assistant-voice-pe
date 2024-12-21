@@ -166,9 +166,9 @@ void MicroWakeWord::preprocessor_task_(void *params) {
                                                         pdMS_TO_TICKS(DATA_TIMEOUT_MS));
         if (bytes_read < new_samples_to_read * sizeof(int16_t)) {
           // This shouldn't ever happen, but if we somehow don't have enough samples, just drop this frame
-          continue;
-        }
-
+            continue;
+          }
+        
         size_t num_samples_processed;
         struct FrontendOutput frontend_output = FrontendProcessSamples(&this_mww->frontend_state_, audio_buffer,
                                                                        new_samples_to_read, &num_samples_processed);
@@ -240,7 +240,7 @@ void MicroWakeWord::inference_task_(void *params) {
 
     {
       xEventGroupSetBits(this_mww->event_group_, EventGroupBits::INFERENCE_MESSAGE_STARTED);
-
+      
       while (!(xEventGroupGetBits(this_mww->event_group_) & COMMAND_STOP)) {
         if (!this_mww->update_model_probabilities_()) {
           // Ran into an issue with inference
@@ -379,9 +379,9 @@ void MicroWakeWord::start() {
   ESP_LOGD(TAG, "Starting wake word detection");
 
   if (this->preprocessor_task_handle_ == nullptr) {
-    this->preprocessor_task_handle_ = xTaskCreateStatic(
+    this->preprocessor_task_handle_ = xTaskCreateStaticPinnedToCore(
         MicroWakeWord::preprocessor_task_, "preprocessor", PREPROCESSOR_TASK_STACK_SIZE, (void *) this,
-        PREPROCESSOR_TASK_PRIORITY, this->preprocessor_task_stack_buffer_, &this->preprocessor_task_stack_);
+        PREPROCESSOR_TASK_PRIORITY, this->preprocessor_task_stack_buffer_, &this->preprocessor_task_stack_, 1);
   }
 
   if (this->inference_task_handle_ == nullptr) {
