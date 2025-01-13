@@ -201,6 +201,7 @@ void MicroWakeWord::preprocessor_task_(void *params) {
 
           xEventGroupSetBits(this_mww->event_group_, EventGroupBits::PREPROCESSOR_MESSAGE_WARNING_FEATURES_FULL);
         }
+         vTaskDelay(pdMS_TO_TICKS(5));
       }
 
       this_mww->microphone_->stop();

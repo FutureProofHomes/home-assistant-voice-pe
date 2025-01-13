@@ -79,7 +79,7 @@ esp_err_t AudioReader::start(const std::string &uri, media_player::MediaFileType
   client_config.cert_pem = nullptr;
   client_config.disable_auto_redirect = false;
   client_config.max_redirection_count = 10;
-  client_config.buffer_size = 512;
+  client_config.buffer_size = 4 * 1024;
   client_config.keep_alive_enable = true;
   client_config.timeout_ms = 5000;  // Doesn't raise an error if exceeded in esp-idf v4.4, it just prevents the
                                     // http_client_read command from blocking for too long
@@ -124,7 +124,7 @@ esp_err_t AudioReader::start(const std::string &uri, media_player::MediaFileType
     return ESP_ERR_NOT_SUPPORTED;
   }
 
-  err = esp_http_client_set_timeout_ms(this->client_, 4);
+  err = esp_http_client_set_timeout_ms(this->client_, 5000);
   if ( err != ESP_OK ){
     this->cleanup_connection_();
     return err;
@@ -132,7 +132,6 @@ esp_err_t AudioReader::start(const std::string &uri, media_player::MediaFileType
   
   this->transfer_buffer_current_ = this->transfer_buffer_;
   this->transfer_buffer_length_ = 0;
-  this->no_data_read_count_ = 0;
 
   return ESP_OK;
 }
@@ -160,38 +159,32 @@ AudioReaderState AudioReader::file_read_() {
 }
 
 AudioReaderState AudioReader::http_read_() {
-  if (this->transfer_buffer_length_ > 0) {
-    size_t bytes_written = this->output_ring_buffer_->write_without_replacement(
-        (void *) this->transfer_buffer_, this->transfer_buffer_length_, pdMS_TO_TICKS(READ_WRITE_TIMEOUT_MS));
-    this->transfer_buffer_length_ -= bytes_written;
-
-    // Shift remaining data to the start of the transfer buffer
-    memmove(this->transfer_buffer_, this->transfer_buffer_ + bytes_written, this->transfer_buffer_length_);
-  }
 
   if (esp_http_client_is_complete_data_received(this->client_)) {
-    if (this->transfer_buffer_length_ == 0) {
       this->cleanup_connection_();
       return AudioReaderState::FINISHED;
     }
-  } else {
-    size_t bytes_to_read = this->transfer_buffer_size_ - this->transfer_buffer_length_;
+  
+  size_t space_available = this->output_ring_buffer_->free();
+  size_t bytes_to_read = this->transfer_buffer_size_;
+  if ( space_available < bytes_to_read ) {
+    bytes_to_read = space_available;
+  }
     int received_len = esp_http_client_read(
-        this->client_, (char *) this->transfer_buffer_ + this->transfer_buffer_length_, bytes_to_read);
+      this->client_, (char *) this->transfer_buffer_, bytes_to_read);
 
-    if (received_len > 0) {
-      this->transfer_buffer_length_ += received_len;
-      this->no_data_read_count_ = 0;
-    } else if (received_len < 0) {
-      // HTTP read error
+  if (received_len < 0) {
       this->cleanup_connection_();
       return AudioReaderState::FAILED;
-    } else {
-      if (bytes_to_read > 0) {
-        // Read timed out
-        vTaskDelay(pdMS_TO_TICKS(READ_WRITE_TIMEOUT_MS));
       }
+  
+  if (received_len > 0) {
+    size_t bytes_written = this->output_ring_buffer_->write_without_replacement(
+        (void *) this->transfer_buffer_, received_len, pdMS_TO_TICKS(READ_WRITE_TIMEOUT_MS));
     }
+
+  if( received_len * 4 < this->transfer_buffer_size_ * 3 ){
+    vTaskDelay(pdMS_TO_TICKS(20));
   }
 
   return AudioReaderState::READING;

@@ -114,6 +114,7 @@ AudioDecoderState AudioDecoder::decode(bool stop_gracefully) {
 
       if (this->output_buffer_length_ > 0) {
         // Output buffer still has decoded audio to write
+        vTaskDelay( pdMS_TO_TICKS(10) );
         return AudioDecoderState::DECODING;
       }
     } else {

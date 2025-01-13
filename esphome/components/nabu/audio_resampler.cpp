@@ -175,19 +175,22 @@ AudioResamplerState AudioResampler::resample(bool stop_gracefully) {
       this->output_buffer_current_ += bytes_written / sizeof(int16_t);
       this->output_buffer_length_ -= bytes_written;
     }
-
+    vTaskDelay( pdMS_TO_TICKS(10) );
     return AudioResamplerState::RESAMPLING;
   }
 
   // Copy audio data directly to output_buffer if resampling isn't required
   if (!this->resample_info_.resample && !this->resample_info_.mono_to_stereo) {
+    if( this->input_ring_buffer_->available() == 0 ){
+      vTaskDelay( pdMS_TO_TICKS(100) );
+    }
     size_t bytes_read =
         this->input_ring_buffer_->read((void *) this->output_buffer_, this->internal_buffer_samples_ * sizeof(int16_t),
                                        pdMS_TO_TICKS(READ_WRITE_TIMEOUT_MS));
 
     this->output_buffer_current_ = this->output_buffer_;
     this->output_buffer_length_ += bytes_read;
-
+    vTaskDelay( pdMS_TO_TICKS(READ_WRITE_TIMEOUT_MS) );
     return AudioResamplerState::RESAMPLING;
   }
 
@@ -226,6 +229,7 @@ AudioResamplerState AudioResampler::resample(bool stop_gracefully) {
   }
 
   if (this->input_buffer_length_ == 0) {
+    vTaskDelay( pdMS_TO_TICKS(READ_WRITE_TIMEOUT_MS) );
     return AudioResamplerState::RESAMPLING;
   }
 
