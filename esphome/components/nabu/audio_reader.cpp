@@ -124,7 +124,7 @@ esp_err_t AudioReader::start(const std::string &uri, media_player::MediaFileType
     return ESP_ERR_NOT_SUPPORTED;
   }
 
-  err = esp_http_client_set_timeout_ms(this->client_, 5000);
+  err = esp_http_client_set_timeout_ms(this->client_, 10);
   if ( err != ESP_OK ){
     this->cleanup_connection_();
     return err;

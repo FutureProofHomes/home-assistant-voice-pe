@@ -12,6 +12,7 @@ static const size_t FILE_BUFFER_SIZE = 32 * 1024;
 static const size_t FILE_RING_BUFFER_SIZE = 64 * 1024;
 static const size_t BUFFER_SIZE_SAMPLES = 24000 / 4;
 static const size_t BUFFER_SIZE_BYTES = BUFFER_SIZE_SAMPLES * sizeof(int16_t);
+static const size_t DECODED_RING_BUFFER_SIZE = BUFFER_SIZE_BYTES * 32;
 
 static const uint32_t READER_TASK_STACK_SIZE = 5 * 1024;
 static const uint32_t DECODER_TASK_STACK_SIZE = 3 * 1024;
@@ -92,7 +93,7 @@ esp_err_t AudioPipeline::allocate_buffers_() {
     this->raw_file_ring_buffer_ = RingBuffer::create(FILE_RING_BUFFER_SIZE);
 
   if (this->decoded_ring_buffer_ == nullptr)
-    this->decoded_ring_buffer_ = RingBuffer::create(BUFFER_SIZE_BYTES * 16);
+    this->decoded_ring_buffer_ = RingBuffer::create(DECODED_RING_BUFFER_SIZE);
 
   if ((this->raw_file_ring_buffer_ == nullptr) || (this->decoded_ring_buffer_ == nullptr)) {
     return ESP_ERR_NO_MEM;
