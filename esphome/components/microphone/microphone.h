@@ -26,9 +26,13 @@ class Microphone {
     this->data_callbacks_.add(std::move(data_callback));
   }
   virtual size_t read(int16_t *buf, size_t len) = 0;
+  virtual size_t read2(int16_t *buf, size_t len) {
+    return this->read(buf, len);
+  }
 
   /// @brief Reads from the microphone blocking ticks_to_wait FreeRTOS ticks. Intended for use in tasks.
   virtual size_t read(int16_t *buf, size_t len, TickType_t ticks_to_wait) { return this->read(buf, len); }
+  virtual size_t read2(int16_t *buf, size_t len, TickType_t ticks_to_wait) { return this->read(buf, len); }
 
   /// @brief If the microphone implementation uses a ring buffer, this will reset it - discarding all the stored data
   virtual void reset() {}
